@@ -1,7 +1,7 @@
-// src/pages/Tasks/Tasks.styles.js
 import styled from 'styled-components';
 
 export const Container = styled.div`
+	position: relative;
 	padding: 20px;
     width: 100dvw;
     height: fit-content;
@@ -10,20 +10,28 @@ export const Container = styled.div`
 `;
 
 export const Header = styled.header`
+	width: 100%;
+	height: fit-content;
+	padding: 20px;
+	position: absolute;
+	top: 0px;
+	left: 0px;
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 20px;
+	background-color: #262626;
+	color: #fafbfc;
 
-	h1 {
+	span {
 		font-size: 24px;
+		font-weight: bold;
 	}
 `;
 
 export const LogoutButton = styled.button`
 	background: none;
 	border: none;
-	color: #e74c3c;
+	color: #fafbfc;
 	font-weight: bold;
 	display: flex;
 	align-items: center;
@@ -31,11 +39,42 @@ export const LogoutButton = styled.button`
 	cursor: pointer;
 `;
 
+export const Content = styled.div`
+	margin-top: 84px;
+	display: flex;
+	flex-direction: column;
+`;
+
+export const Buttons = styled.div`
+	display: flex;
+`;
+
+export const Button = styled.div`
+	margin: 0px 20px 20px 0px;
+	width: 150px;
+	padding: 5px;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	background-color: #262626;
+	color: #fff;
+	transition: background-color 0.3s ease, transform 0.2s ease;
+
+	span {
+		margin-left: 10px;
+	}
+
+	&:hover {
+		background-color: #26262690;
+		cursor: pointer;
+	}
+`;
+
 export const FilterBar = styled.div`
 	margin-bottom: 20px;
 
 	select {
-		margin-left: 10px;
+		width: 150px;
 		padding: 5px;
 	}
 `;

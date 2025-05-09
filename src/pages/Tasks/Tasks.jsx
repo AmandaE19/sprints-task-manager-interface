@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from "react-router-dom";
 import {
   DndContext,
   closestCenter,
@@ -10,12 +11,14 @@ import {
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  useSortable,
   verticalListSortingStrategy
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+
 import * as C from './styled';
 import { FiLogOut } from 'react-icons/fi';
+import { IoMdAdd } from "react-icons/io"
+import Card from '../../components/Card/Card';
+import ModalTask from '../../components/ModalTask/ModalTask';
 
 const DroppableColumn = ({ id, children }) => {
   const { setNodeRef } = useDroppable({ id });
@@ -30,37 +33,15 @@ const initialTasks = [
   { id: '3', title: 'Testes', responsible: 'Carlos', status: 'Done', description: 'Cobertura de testes unitários' }
 ];
 
-const TaskCardSortable = ({ task, onMouseDown, onClick }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    cursor: 'grab'
-  };
-
-  return (
-    <C.TaskCard
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      style={style}
-      onMouseDown={onMouseDown} // Detecta o início do arraste
-      onClick={onClick}  // Abre o modal
-    >
-      <strong>{task.title}</strong>
-      <p>{task.responsible}</p>
-    </C.TaskCard>
-  );
-};
-
 const Tasks = () => {
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState(initialTasks);
   const [modalTask, setModalTask] = useState(null);
   const [selectedSprint, setSelectedSprint] = useState('Sprint 1');
+  const [optionNew, setOptionNew] = useState();
   const [activeTask, setActiveTask] = useState(null);
-  const [isDragging, setIsDragging] = useState(false); // Estado do arraste
-  const [mouseDown, setMouseDown] = useState(false); // Para verificar se o clique foi de fato um arraste
+  const [isDragging, setIsDragging] = useState(false);
+  const [mouseDown, setMouseDown] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor));
 
@@ -71,7 +52,7 @@ const Tasks = () => {
   };
 
   const handleDragStart = (event) => {
-    setIsDragging(true); // Inicia o arraste
+    setIsDragging(true);
     const draggedId = event.active.id;
     const draggedTask = tasks.find((t) => t.id === draggedId);
     setActiveTask(draggedTask);
@@ -80,7 +61,7 @@ const Tasks = () => {
   const handleDragEnd = (event) => {
     const { active, over } = event;
     setActiveTask(null);
-    setIsDragging(false); // Fim do arraste
+    setIsDragging(false);
 
     if (!over) return;
 
@@ -112,73 +93,81 @@ const Tasks = () => {
     setModalTask(task);
   };
 
-  const closeTaskModal = () => {
-    setModalTask(null);
-  };
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/")
+  }
 
   return (
     <C.Container>
       <C.Header>
-        <h1>Painel de Tarefas</h1>
-        <C.LogoutButton><FiLogOut /> Sair</C.LogoutButton>
+        <span>Gestão de Tarefas</span>
+        <C.LogoutButton onClick={handleLogout}><FiLogOut /> Sair</C.LogoutButton>
       </C.Header>
 
-      <C.FilterBar>
-        <label htmlFor="sprint">Sprint:</label>
-        <select id="sprint" value={selectedSprint} onChange={(e) => setSelectedSprint(e.target.value)}>
-          <option value="Sprint 1">Sprint 1</option>
-          <option value="Sprint 2">Sprint 2</option>
-        </select>
-      </C.FilterBar>
+      <C.Content>
+        <C.Buttons>
+          <C.Button onClick={(e) => setOptionNew("sprint")}>
+            <IoMdAdd />
+            <span>Nova Sprint</span>
+          </C.Button>
 
-      <C.Board>
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          {columns.map((column) => (
-            <DroppableColumn key={column} id={column}>
-              <h2>{column}</h2>
-              <SortableContext
-                items={tasksByStatus[column].map((task) => task.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {tasksByStatus[column].map((task) => (
-                  <TaskCardSortable
-                    key={task.id}
-                    task={task}
-                    onMouseDown={handleMouseDown}
-                    onMouseUp={handleMouseUp}
-                    onClick={(e) => openTaskModal(task, e)}
-                  />
-                ))}
-              </SortableContext>
-            </DroppableColumn>
-          ))}
+          <C.Button onClick={(e) => setOptionNew("task")}>
+            <IoMdAdd />
+            <span>Nova Tarefa</span>
+          </C.Button>
 
-          <DragOverlay>
-            {activeTask ? (
-              <C.TaskCard>
-                <strong>{activeTask.title}</strong>
-                <p>{activeTask.responsible}</p>
-              </C.TaskCard>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      </C.Board>
+          <C.FilterBar>
+            <select id="sprint" value={selectedSprint} onChange={(e) => setSelectedSprint(e.target.value)}>
+              <option value="Sprint 1">Sprint 1</option>
+              <option value="Sprint 2">Sprint 2</option>
+            </select>
+          </C.FilterBar>
+        </C.Buttons>
 
-      {modalTask && (
-        <C.ModalOverlay onClick={closeTaskModal}>
-          <C.ModalContent onClick={(e) => e.stopPropagation()}>
-            <h2>{modalTask.title}</h2>
-            <p><strong>Responsável:</strong> {modalTask.responsible}</p>
-            <p><strong>Descrição:</strong> {modalTask.description}</p>
-            <button onClick={closeTaskModal}>Fechar</button>
-          </C.ModalContent>
-        </C.ModalOverlay>
-      )}
+        <C.Board>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            {columns.map((column) => (
+              <DroppableColumn key={column} id={column}>
+                <h2>{column}</h2>
+                <SortableContext
+                  items={tasksByStatus[column].map((task) => task.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {tasksByStatus[column].map((task) => (
+                    <Card
+                      key={task.id}
+                      task={task}
+                      onMouseDown={handleMouseDown}
+                      onMouseUp={handleMouseUp}
+                      openTaskModal={openTaskModal}
+                    />
+                  ))}
+                </SortableContext>
+              </DroppableColumn>
+            ))}
+
+            <DragOverlay>
+              {activeTask ? (
+                <C.TaskCard>
+                  <strong>{activeTask.title}</strong>
+                  <p>{activeTask.responsible}</p>
+                </C.TaskCard>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </C.Board>
+
+        {
+          modalTask && <ModalTask task={modalTask} setModalTask={setModalTask} />
+        }
+
+      </C.Content>
     </C.Container>
   );
 };
