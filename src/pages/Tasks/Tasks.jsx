@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import {
   DndContext,
@@ -19,46 +19,74 @@ import { FiLogOut } from 'react-icons/fi';
 import { IoMdAdd } from "react-icons/io"
 import Card from '../../components/Card/Card';
 import ModalTask from '../../components/ModalTask/ModalTask';
+import { handleSprints, tasksBySprint, updateTaskStatus } from '../../services/ApiBackend';
+import ModalNewTask from '../../components/ModalNewTask/ModalNewTask';
 
 const DroppableColumn = ({ id, children }) => {
   const { setNodeRef } = useDroppable({ id });
   return <C.Column ref={setNodeRef}>{children}</C.Column>;
 };
 
-const columns = ['To Do', 'Doing', 'Done'];
-
-const initialTasks = [
-  { id: '1', title: 'Criar layout', responsible: 'Amanda', status: 'To Do', description: 'Fazer layout da página inicial' },
-  { id: '2', title: 'Integração backend', responsible: 'Bruno', status: 'Doing', description: 'Conectar API de tarefas' },
-  { id: '3', title: 'Testes', responsible: 'Carlos', status: 'Done', description: 'Cobertura de testes unitários' }
-];
+const columns = ['TODO', 'DOING', 'DONE'];
 
 const Tasks = () => {
   const navigate = useNavigate();
-  const [tasks, setTasks] = useState(initialTasks);
+  const [sprints, setSprints] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [modalTask, setModalTask] = useState(null);
-  const [selectedSprint, setSelectedSprint] = useState('Sprint 1');
-  const [optionNew, setOptionNew] = useState();
+  const [selectedSprint, setSelectedSprint] = useState('Selecione uma Sprint');
+  const [modalNewTask, setModalNewTask] = useState();
   const [activeTask, setActiveTask] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [mouseDown, setMouseDown] = useState(false);
 
+  const isAdmin = localStorage.getItem("role") === "admin";
+
+  useEffect(() => {
+    const getSprints = async () => {
+      try {
+        const sprints = await handleSprints();
+        setSprints(sprints);
+      } catch (error) {
+        console.error("Erro ao buscar sprints:", error);
+      }
+    }
+    getSprints();
+  }, [])
+
+  useEffect(() => {
+    if (selectedSprint === "Selecione uma Sprint") {
+      return;
+    }
+
+    const fetchTasks = async () => {
+      try {
+        const tasks = await tasksBySprint(selectedSprint);
+        setTasks(tasks);
+      } catch (error) {
+        console.error("Erro ao buscar tarefas:", error);
+      }
+    };
+
+    fetchTasks();
+  }, [selectedSprint]);
+
   const sensors = useSensors(useSensor(PointerSensor));
 
   const tasksByStatus = {
-    "To Do": tasks.filter((t) => t.status === "To Do"),
-    "Doing": tasks.filter((t) => t.status === "Doing"),
-    "Done": tasks.filter((t) => t.status === "Done"),
+    "TODO": tasks.filter((t) => t.status === "TODO"),
+    "DOING": tasks.filter((t) => t.status === "DOING"),
+    "DONE": tasks.filter((t) => t.status === "DONE"),
   };
 
   const handleDragStart = (event) => {
     setIsDragging(true);
     const draggedId = event.active.id;
-    const draggedTask = tasks.find((t) => t.id === draggedId);
+    const draggedTask = tasks.find((t) => t._id === draggedId);
     setActiveTask(draggedTask);
   };
 
-  const handleDragEnd = (event) => {
+  const handleDragEnd = async (event) => {
     const { active, over } = event;
     setActiveTask(null);
     setIsDragging(false);
@@ -66,16 +94,26 @@ const Tasks = () => {
     if (!over) return;
 
     const activeTaskId = active.id;
-    const newStatus = over.id;
+    let newStatus = over.id;
 
-    const taskToUpdate = tasks.find((task) => task.id === activeTaskId);
+    if (newStatus !== "TODO" && newStatus !== "DOING" && newStatus !== "DONE") {
+      newStatus = "TODO";
+    }
+
+    const taskToUpdate = tasks.find((task) => task._id === activeTaskId);
 
     if (taskToUpdate && taskToUpdate.status !== newStatus) {
       setTasks((prevTasks) =>
         prevTasks.map((task) =>
-          task.id === activeTaskId ? { ...task, status: newStatus } : task
+          task._id === activeTaskId ? { ...task, status: newStatus } : task
         )
       );
+
+      try {
+        await updateTaskStatus(activeTaskId, newStatus);
+      } catch (error) {
+        console.error("Erro ao atualizar status da tarefa:", error);
+      }
     }
   };
 
@@ -107,20 +145,19 @@ const Tasks = () => {
 
       <C.Content>
         <C.Buttons>
-          <C.Button onClick={(e) => setOptionNew("sprint")}>
-            <IoMdAdd />
-            <span>Nova Sprint</span>
-          </C.Button>
-
-          <C.Button onClick={(e) => setOptionNew("task")}>
-            <IoMdAdd />
-            <span>Nova Tarefa</span>
-          </C.Button>
+          {isAdmin &&
+            <C.Button onClick={() => setModalNewTask(true)}>
+              <IoMdAdd />
+              <span>Nova Tarefa</span>
+            </C.Button>
+          }
 
           <C.FilterBar>
             <select id="sprint" value={selectedSprint} onChange={(e) => setSelectedSprint(e.target.value)}>
-              <option value="Sprint 1">Sprint 1</option>
-              <option value="Sprint 2">Sprint 2</option>
+              <option value="Selecione uma Sprint" disabled>Selecione uma Sprint</option>
+              {sprints.length > 0 && sprints.map((sprint) => (
+                <option value={sprint}>{sprint}</option>
+              ))}
             </select>
           </C.FilterBar>
         </C.Buttons>
@@ -136,12 +173,12 @@ const Tasks = () => {
               <DroppableColumn key={column} id={column}>
                 <h2>{column}</h2>
                 <SortableContext
-                  items={tasksByStatus[column].map((task) => task.id)}
+                  items={tasksByStatus[column].map((task) => task._id)}
                   strategy={verticalListSortingStrategy}
                 >
                   {tasksByStatus[column].map((task) => (
                     <Card
-                      key={task.id}
+                      key={task._id}
                       task={task}
                       onMouseDown={handleMouseDown}
                       onMouseUp={handleMouseUp}
@@ -155,8 +192,8 @@ const Tasks = () => {
             <DragOverlay>
               {activeTask ? (
                 <C.TaskCard>
-                  <strong>{activeTask.title}</strong>
-                  <p>{activeTask.responsible}</p>
+                  <strong>{activeTask.name}</strong>
+                  <p>{activeTask.assignedTo}</p>
                 </C.TaskCard>
               ) : null}
             </DragOverlay>
@@ -165,6 +202,10 @@ const Tasks = () => {
 
         {
           modalTask && <ModalTask task={modalTask} setModalTask={setModalTask} />
+        }
+
+        {
+          modalNewTask && <ModalNewTask onClose={() => setModalNewTask(false)} />
         }
 
       </C.Content>

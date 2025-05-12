@@ -31,9 +31,11 @@ const LoginPage = () => {
 			}
 
 			const token = response.access_token ? response.access_token : "Unauthorized";
-			
+
 			if(token !== "Unauthorized") {
-				localStorage.setItem("token", token)
+				localStorage.setItem("token", token);
+				localStorage.setItem("name", response.username);
+				localStorage.setItem("role", response.role);
 				navigate("/tarefas");
 			}else {
 				alert("E-mail ou senha inválido!");

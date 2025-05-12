@@ -1,6 +1,6 @@
 import styled from "styled-components";
 
-export const ModalOverlay = styled.div`
+export const ModalContainer = styled.div`
 	position: fixed;
 	top: 0;
 	left: 0;
@@ -29,8 +29,7 @@ export const Input = styled.div`
 		pointer-events: none;
 	}
 
-	input,
-	select {
+	input {
 		width: 100%;
 		height: 42px;
 		padding: 10px 10px 10px 12px;
@@ -42,15 +41,12 @@ export const Input = styled.div`
 		transition: all 0.3s ease;
 	}
 
-	input:focus,
-	select:focus {
+	input:focus {
 		border-color: #1f3f5e;
 	}
 
 	input:focus + label,
-	input:not(:placeholder-shown) + label,
-	select:focus + label,
-	select:not([value=""]) + label {
+	input:not(:placeholder-shown) + label {
 		top: -8px;
 		left: 8px;
 		font-size: 12px;
@@ -59,19 +55,24 @@ export const Input = styled.div`
 	}
 `;
 
-
 export const ModalContent = styled.div`
 	background: white;
 	padding: 20px;
 	border-radius: 8px;
 	width: 300px;
-	
-	${Input}:first-of-type {
-			margin-top: 15px;
+    height: fit-content;
+
+    ${Input}:first-of-type {
+		margin-top: 15px;
 	}
 
+    span {
+        font-weight: bold;
+        font-size: 16px;
+    }
+
 	button {
-		margin: 10px 10px 0px 0px;
+		margin-right: 10px;
 		padding: 6px 12px;
 		background: #262626;
 		color: white;
